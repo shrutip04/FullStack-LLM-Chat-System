@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My Personal ChatGPT</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>TechBot — LLM Chat System</title>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -12,32 +13,50 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <h2>ChatGPT</h2>
-        <button class="new-chat" onclick="startNewChat()">+ New chat</button>
-    <div id="chat-list"></div>
+        <h2>TechBot</h2>
+        <p class="sidebar-subtitle">ChatGPT-style AI system</p>
 
+        <button class="new-chat" onclick="startNewChat()">+ New chat</button>
+
+        <div id="chat-list"></div>
     </div>
 
     <!-- Chat Area -->
     <div class="chat-area">
-        <div id="chat-box"></div>
 
-        <div class="input-bar">
-            <label for="file-upload" class="upload-btn">📎</label>
-            <input id="file-upload" type="file" hidden />
-
-            <input id="user-input" type="text" placeholder="Send a message..." />
-
-            <button onclick="startVoice()">🎙️</button>
-            <button onclick="sendMessage()">➤</button>
+        <!-- Empty State -->
+        <div id="empty-state">
+            <h3>👋 Welcome to TechBot</h3>
+            <p>
+                Ask questions about backend systems, AI, or upload a document
+                to chat with your data.
+            </p>
         </div>
 
+        <!-- Chat Messages -->
+        <div id="chat-box"></div>
+
+        <!-- Input Bar -->
+        <div class="input-bar">
+            <label for="file-upload" class="upload-btn">📁</label>
+            <input id="file-upload" type="file" hidden />
+
+            <input
+                id="user-input"
+                type="text"
+                placeholder="Ask about system design, AI, or upload a document…"
+            />
+
+            <button onclick="startVoice()">🎙️</button>
+           <!-- <button onclick="sendMessage()">➤</button>-->
+            <button id="send-btn" onclick="sendMessage()">➤</button>
+            <button id="stop-btn" onclick="stopStreaming()" style="display:none;">⏹ Stop</button>
+
+        </div>
 
     </div>
-
 </div>
 
 <script src="{{ url_for('static', filename='script.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
 </html>

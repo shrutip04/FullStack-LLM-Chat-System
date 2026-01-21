@@ -1,5 +1,9 @@
 let chatId = null;
 let recognition = null;
+let isStreaming = false;
+let currentReader = null;
+let stopRequested = false;
+
 
 // --------------------
 // START NEW CHAT
@@ -10,7 +14,9 @@ async function startNewChat() {
         const data = await res.json();
 
         chatId = data.chat_id;
+
         document.getElementById("chat-box").innerHTML = "";
+        document.getElementById("empty-state").style.display = "none";
 
         await loadChatHistory();
     } catch (err) {
@@ -58,6 +64,10 @@ async function loadChatHistory() {
 // --------------------
 async function openChat(id) {
     chatId = id;
+    isStreaming = false;
+    currentReader = null;
+
+    document.getElementById("empty-state").style.display = "none";
 
     const res = await fetch(`/chat/${id}`);
     const messages = await res.json();
@@ -83,6 +93,7 @@ async function deleteChat(id) {
     if (chatId === id) {
         chatId = null;
         document.getElementById("chat-box").innerHTML = "";
+        document.getElementById("empty-state").style.display = "flex";
     }
 
     loadChatHistory();
@@ -92,9 +103,27 @@ async function deleteChat(id) {
 // SEND MESSAGE (STREAMING)
 // --------------------
 async function sendMessage() {
+    if (isStreaming) return;
+
     const input = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const stopBtn = document.getElementById("stop-btn");
+
     const message = input.value.trim();
-    if (!message || !chatId) return;
+    if (!message) return;
+
+    if (!chatId) {
+        await startNewChat();
+    }
+
+    isStreaming = true;
+    input.disabled = true;
+    sendBtn.disabled = true;
+
+    sendBtn.style.display = "none";
+    stopBtn.style.display = "inline-block";
+
+    document.getElementById("empty-state").style.display = "none";
 
     addMessage(message, "user");
     input.value = "";
@@ -120,54 +149,89 @@ async function sendMessage() {
 
         if (!res.ok || !res.body) {
             aiMsg.innerText = "⚠️ Server error";
+            resetInput();
             return;
         }
 
-        const reader = res.body.getReader();
+        currentReader = res.body.getReader();
         const decoder = new TextDecoder("utf-8");
 
         let buffer = "";
 
-        while (true) {
-            const { value, done } = await reader.read();
+        while (!stopRequested) {
+            const { value, done } = await currentReader.read();
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
-
-            // Text + blinking cursor (ChatGPT-style)
             aiMsg.innerHTML = `${buffer}<span class="cursor">▍</span>`;
             box.scrollTop = box.scrollHeight;
         }
 
-        // AFTER streaming finishes → render markdown ONCE
         aiMsg.innerHTML = marked.parse(buffer);
 
-        // 🔊 Speaker button (ChatGPT-style)
         const speakBtn = document.createElement("span");
         speakBtn.innerText = " 🔊";
         speakBtn.style.cursor = "pointer";
         speakBtn.title = "Read aloud";
         speakBtn.onclick = () => speak(buffer);
-
         aiMsg.appendChild(speakBtn);
-
 
     } catch (err) {
         console.error(err);
         aiMsg.innerText = "⚠️ Connection error";
+    } finally {
+        resetInput();
     }
+
+    stopRequested = false;
+}
+
+// --------------------
+// STOP GENERATING
+// --------------------
+async function stopStreaming() {
+    stopRequested = true;
+
+    if (currentReader) {
+        try { currentReader.cancel(); } catch {}
+        currentReader = null;
+    }
+
+    if (chatId) {
+        fetch(`/stop/${chatId}`, { method: "POST" });
+    }
+
+    resetInput();
+}
+
+// --------------------
+// RESET INPUT STATE
+// --------------------
+function resetInput() {
+    const input = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const stopBtn = document.getElementById("stop-btn");
+
+    isStreaming = false;
+    input.disabled = false;
+    sendBtn.disabled = false;
+
+    sendBtn.style.display = "inline-block";
+    stopBtn.style.display = "none";
+
+    input.focus();
 }
 
 // --------------------
 // ADD MESSAGE TO UI
 // --------------------
-function addMessage(text, role) {
+function addMessage(text, role, forcePlain = false) {
     const box = document.getElementById("chat-box");
     const msg = document.createElement("div");
 
     msg.className = role === "assistant" ? "assistant" : "user";
 
-    if (role === "assistant") {
+    if (role === "assistant" && !forcePlain) {
         msg.innerHTML = marked.parse(text);
     } else {
         msg.innerText = text;
@@ -177,21 +241,12 @@ function addMessage(text, role) {
     box.scrollTop = box.scrollHeight;
 }
 
-function trimMessages(max = 120) {
-    const box = document.getElementById("chat-box");
-    while (box.children.length > max) {
-        box.removeChild(box.firstChild);
-    }
-}
-
-
 // --------------------
 // ENTER KEY SUPPORT
 // --------------------
 document.addEventListener("DOMContentLoaded", () => {
-    startNewChat();
-
     const input = document.getElementById("user-input");
+
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -204,8 +259,10 @@ document.addEventListener("DOMContentLoaded", () => {
 // VOICE INPUT 🎙️
 // --------------------
 function startVoice() {
+    if (isStreaming) return;
+
     if (!("webkitSpeechRecognition" in window)) {
-        alert("Voice input not supported in this browser");
+        alert("Voice input not supported");
         return;
     }
 
@@ -214,17 +271,9 @@ function startVoice() {
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    recognition.onstart = () => {
-        console.log("🎙️ Listening...");
-    };
-
     recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        document.getElementById("user-input").value = text;
-    };
-
-    recognition.onerror = (event) => {
-        console.error("Voice error:", event.error);
+        document.getElementById("user-input").value =
+            event.results[0][0].transcript;
     };
 
     recognition.start();
@@ -237,23 +286,21 @@ function speak(text) {
     if (!window.speechSynthesis) return;
 
     speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    speechSynthesis.speak(utterance);
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
 }
 
 // --------------------
-// FILE UPLOAD (PDF / DOCX)
+// FILE UPLOAD (🔥 FIXED)
 // --------------------
 document.getElementById("file-upload").addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (!file || !chatId) return;
+    if (!file || isStreaming) return;
 
-    addMessage(`📄 Uploading: ${file.name}`, "assistant");
+    if (!chatId) {
+        await startNewChat();
+    }
+
+    addMessage(`📄 Uploading: ${file.name}`, "assistant", true);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -265,24 +312,32 @@ document.getElementById("file-upload").addEventListener("change", async (e) => {
             body: formData
         });
 
-        const data = await res.json();
+        let data;
+        try {
+            data = await res.json();
+        } catch {
+            addMessage("⚠️ Server returned invalid response", "assistant", true);
+            return;
+        }
 
         if (!res.ok) {
-            addMessage(`⚠️ Upload failed: ${data.error}`, "assistant");
+            addMessage(`⚠️ Upload failed: ${data.error || "Unknown error"}`, "assistant", true);
             return;
         }
 
         addMessage(
             `✅ File uploaded: ${file.name}\nYou can now ask questions about this document.`,
-            "assistant"
+            "assistant",
+            true
         );
+
+        // 🔥 THIS IS THE KEY LINE
+        await openChat(chatId);
 
     } catch (err) {
         console.error(err);
-        addMessage("⚠️ Upload error", "assistant");
+        addMessage("⚠️ Upload error", "assistant", true);
     }
 
-    e.target.value = ""; // reset input
+    e.target.value = "";
 });
-
-
