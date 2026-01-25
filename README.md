@@ -10,6 +10,11 @@ This project emphasizes system design concepts such as session-based conversatio
 
 Screenshots and demo media are available in the `/assets` folder.
 
+
+▶️ **Watch the demo video:**  
+[Click here to watch the demo](assets/demo_vid/llm-chat-system-demo.mp4)
+
+
 - ChatGPT-like chat interface with streaming responses  
 - Multiple chat sessions with persistent history  
 - Smooth UX with typing indicators and blinking cursor  
