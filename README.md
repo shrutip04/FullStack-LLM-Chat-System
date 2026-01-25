@@ -12,7 +12,7 @@ Screenshots and demo media are available in the `/assets` folder.
 
 
 ▶️ **Watch the demo video:**  
-[Click here to watch the demo](assets/demo_vid/llm-chat-system-demo.mp4)
+[Click here to watch the demo](assets/llm-chat-system-demo.mp4)
 
 
 - ChatGPT-like chat interface with streaming responses  
