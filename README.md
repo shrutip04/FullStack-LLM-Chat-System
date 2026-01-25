@@ -20,9 +20,11 @@ A short walkthrough of the system showing how the chat interface works, how conv
 [Click here to watch the demo](assets/llm-chat-system-demo.mp4)
 
 ### 📸 Screenshots
+
 ![Chat Interface](assets/screenshots/demo1.png)
 ![Persistent Memory](assets/screenshots/demo2.png)
 ![Streaming Response](assets/screenshots/demo3.png)
+![Multiple Sessions](assets/screenshots/demo4.png)
 
 
 ---
