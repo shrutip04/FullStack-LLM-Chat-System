@@ -8,16 +8,22 @@ This project emphasizes system design concepts such as session-based conversatio
 
 ## 🚀 Demo
 
-Screenshots and demo media are available in the `/assets` folder.
+A short walkthrough of the system showing how the chat interface works, how conversation memory is preserved across messages, and how responses are streamed in real time.
 
+### ✨ Key Demo Highlights
+- ChatGPT-like chat interface with token-by-token streaming
+- Session-based conversations with persistent history
+- Context continuation across multi-turn conversations
+- Smooth UX with typing indicators and blinking cursor
 
 ▶️ **Watch the demo video:**  
 [Click here to watch the demo](assets/llm-chat-system-demo.mp4)
 
+### 📸 Screenshots
+![Chat Interface](assets/screenshots/demo1.png)
+![Persistent Memory](assets/screenshots/demo2.png)
+![Streaming Response](assets/screenshots/demo3.png)
 
-- ChatGPT-like chat interface with streaming responses  
-- Multiple chat sessions with persistent history  
-- Smooth UX with typing indicators and blinking cursor  
 
 ---
 
